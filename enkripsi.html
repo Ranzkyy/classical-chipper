@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Classical Ciphers - Dark Theme</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+      }
+      .container {
+        background-color: #2d2d2d;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+      }
+      h1 {
+        text-align: center;
+        color: #ffffff;
+        margin-bottom: 30px;
+        font-size: 2.2em;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        border-bottom: 2px solid #404040;
+        padding-bottom: 15px;
+      }
+      .grid-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+      }
+      .input-column,
+      .output-column {
+        display: flex;
+        flex-direction: column;
+      }
+      .input-group {
+        margin-bottom: 20px;
+        background-color: #333333;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #404040;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #b3b3b3;
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+      }
+      select,
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        background-color: #1a1a1a;
+        border: 1px solid #404040;
+        border-radius: 4px;
+        color: #ffffff;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      select:focus,
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #666666;
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+      }
+      .button-group {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 20px;
+      }
+      button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+      }
+      .encrypt-btn {
+        background-color: #404040;
+        color: white;
+        grid-column: 1 / 2;
+      }
+      .decrypt-btn {
+        background-color: #333333;
+        color: white;
+        grid-column: 2 / 3;
+      }
+      .upload-btn {
+        background-color: #4d4d4d;
+        color: white;
+        grid-column: 1 / 3;
+      }
+      button:hover {
+        background-color: #666666;
+      }
+      .output {
+        background-color: #333333;
+        border: 1px solid #404040;
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 200px;
+      }
+      .output h3 {
+        margin-top: 0;
+        color: #b3b3b3;
+        border-bottom: 1px solid #404040;
+        padding-bottom: 10px;
+      }
+      .download-btn {
+        background-color: #4d4d4d;
+        color: white;
+        width: 100%;
+        margin-top: 15px;
+      }
+      @media (max-width: 768px) {
+        .grid-layout {
+          grid-template-columns: 1fr;
+        }
+        .button-group {
+          grid-template-columns: 1fr;
+        }
+        .encrypt-btn,
+        .decrypt-btn,
+        .upload-btn {
+          grid-column: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Classical Ciphers</h1>
+      <div class="grid-layout">
+        <div class="input-column">
+          <div class="input-group">
+            <label for="cipherType">Select Cipher</label>
+            <select id="cipherType">
+              <option value="vigenere">
+                Vigenere Cipher (mengenkripsi huruf alfabet)
+              </option>
+              <option value="extendedVigenere">
+                Extended Vigenere Cipher (256 karakter ASCII)
+              </option>
+              <option value="playfair">Playfair Cipher (matriks 5x5)</option>
+              <option value="enigma">Enigma Cipher</option>
+              <option value="otp">One-Time Pad</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="key">Encryption Key</label>
+            <input type="text" id="key" placeholder="Enter encryption key" />
+          </div>
+          <div class="input-group">
+            <label for="inputText">Input Text</label>
+            <textarea
+              id="inputText"
+              rows="6"
+              placeholder="Enter text or drop a file"
+            ></textarea>
+          </div>
+          <div class="button-group">
+            <button class="encrypt-btn" onclick="encrypt()">Encrypt</button>
+            <button class="decrypt-btn" onclick="decrypt()">Decrypt</button>
+            <input type="file" id="fileInput" style="display: none" />
+            <button
+              class="upload-btn"
+              onclick="document.getElementById('fileInput').click()"
+            >
+              Upload File
+            </button>
+          </div>
+        </div>
+        <div class="output-column">
+          <div class="output">
+            <h3>Output</h3>
+            <p id="outputText"></p>
+          </div>
+          <button class="download-btn" onclick="downloadOutput()">
+            Download Output
+          </button>
+        </div>
+      </div>
+          
+    </div>
+
+    <script>
+      // Vigenere Cipher implementation
+      function vigenereEncrypt(text, key, extended = false) {
+        let result = "";
+        let keyIndex = 0;
+
+        for (let i = 0; i < text.length; i++) {
+          let char = text[i];
+          if (!extended && !char.match(/[a-zA-Z]/)) continue;
+
+          let charCode = extended
+            ? text.charCodeAt(i)
+            : text.toUpperCase().charCodeAt(i) - 65;
+          let keyChar = key[keyIndex % key.length];
+          let keyCode = extended
+            ? keyChar.charCodeAt(0)
+            : keyChar.toUpperCase().charCodeAt(0) - 65;
+
+          if (extended) {
+            result += String.fromCharCode((charCode + keyCode) % 256);
+          } else {
+            result += String.fromCharCode(((charCode + keyCode) % 26) + 65);
+          }
+          keyIndex++;
+        }
+
+        return result;
+      }
+
+      function vigenereDecrypt(text, key, extended = false) {
+        let result = "";
+        let keyIndex = 0;
+
+        for (let i = 0; i < text.length; i++) {
+          let char = text[i];
+          if (!extended && !char.match(/[a-zA-Z]/)) continue;
+
+          let charCode = extended
+            ? text.charCodeAt(i)
+            : text.toUpperCase().charCodeAt(i) - 65;
+          let keyChar = key[keyIndex % key.length];
+          let keyCode = extended
+            ? keyChar.charCodeAt(0)
+            : keyChar.toUpperCase().charCodeAt(0) - 65;
+
+          if (extended) {
+            result += String.fromCharCode((charCode - keyCode + 256) % 256);
+          } else {
+            result += String.fromCharCode(
+              ((charCode - keyCode + 26) % 26) + 65
+            );
+          }
+          keyIndex++;
+        }
+
+        return result;
+      }
+
+      // Playfair Cipher implementation
+      // Playfair Cipher implementation
+      function generatePlayfairMatrix(key) {
+        let matrix = [];
+        let alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"; // Note: I and J are combined
+        let usedChars = new Set();
+
+        // First, add the key to the matrix
+        for (let char of key.toUpperCase()) {
+          if (char === "J") char = "I";
+          if (!usedChars.has(char) && char.match(/[A-Z]/)) {
+            matrix.push(char);
+            usedChars.add(char);
+          }
+        }
+
+        // Then add the remaining alphabet
+        for (let char of alphabet) {
+          if (!usedChars.has(char)) {
+            matrix.push(char);
+            usedChars.add(char);
+          }
+        }
+
+        return matrix;
+      }
+
+      function findPositionInMatrix(matrix, char) {
+        const pos = matrix.indexOf(char);
+        return {
+          row: Math.floor(pos / 5),
+          col: pos % 5,
+        };
+      }
+
+      function playfairEncrypt(text, key) {
+        const matrix = generatePlayfairMatrix(key);
+        text = text
+          .toUpperCase()
+          .replace(/J/g, "I")
+          .replace(/[^A-Z]/g, "");
+
+        // Persiapkan teks (split menjadi digraf dan tangani huruf ganda)
+        let prepared = "";
+        for (let i = 0; i < text.length; i++) {
+          prepared += text[i];
+          if (i + 1 < text.length) {
+            if (text[i] === text[i + 1]) {
+              prepared += "X";
+            }
+          }
+        }
+        if (prepared.length % 2 !== 0) prepared += "X";
+
+        // Split menjadi pasangan
+        let pairs = [];
+        for (let i = 0; i < prepared.length; i += 2) {
+          pairs.push(prepared.substr(i, 2));
+        }
+
+        // Enkripsi setiap digraf
+        let result = "";
+        for (let pair of pairs) {
+          let pos1 = findPositionInMatrix(matrix, pair[0]);
+          let pos2 = findPositionInMatrix(matrix, pair[1]);
+
+          if (pos1.row === pos2.row) {
+            result += matrix[pos1.row * 5 + ((pos1.col + 1) % 5)];
+            result += matrix[pos2.row * 5 + ((pos2.col + 1) % 5)];
+          } else if (pos1.col === pos2.col) {
+            result += matrix[((pos1.row + 1) % 5) * 5 + pos1.col];
+            result += matrix[((pos2.row + 1) % 5) * 5 + pos2.col];
+          } else {
+            result += matrix[pos1.row * 5 + pos2.col];
+            result += matrix[pos2.row * 5 + pos1.col];
+          }
+        }
+
+        return result;
+      }
+
+      function playfairDecrypt(text, key) {
+        const matrix = generatePlayfairMatrix(key);
+        text = text
+          .toUpperCase()
+          .replace(/J/g, "I")
+          .replace(/[^A-Z]/g, "");
+
+        // Split menjadi pasangan
+        let pairs = [];
+        for (let i = 0; i < text.length; i += 2) {
+          if (i + 1 < text.length) {
+            pairs.push(text.substr(i, 2));
+          }
+        }
+
+        // Dekripsi setiap digraf
+        let result = "";
+        for (let pair of pairs) {
+          let pos1 = findPositionInMatrix(matrix, pair[0]);
+          let pos2 = findPositionInMatrix(matrix, pair[1]);
+
+          if (pos1.row === pos2.row) {
+            result += matrix[pos1.row * 5 + ((pos1.col - 1 + 5) % 5)];
+            result += matrix[pos2.row * 5 + ((pos2.col - 1 + 5) % 5)];
+          } else if (pos1.col === pos2.col) {
+            result += matrix[((pos1.row - 1 + 5) % 5) * 5 + pos1.col];
+            result += matrix[((pos2.row - 1 + 5) % 5) * 5 + pos2.col];
+          } else {
+            result += matrix[pos1.row * 5 + pos2.col];
+            result += matrix[pos2.row * 5 + pos1.col];
+          }
+        }
+
+        // Post-processing: hapus 'X' yang disisipkan
+        let finalResult = "";
+        for (let i = 0; i < result.length; i++) {
+          if (result[i] === "X") {
+            // Cek apakah X ini adalah sisipan antara huruf ganda
+            if (
+              i > 0 &&
+              i < result.length - 1 &&
+              result[i - 1] === result[i + 1]
+            ) {
+              continue; // Lewati X ini
+            }
+          }
+          finalResult += result[i];
+        }
+
+        // Hapus X di akhir jika ada
+        if (finalResult.endsWith("X")) {
+          finalResult = finalResult.slice(0, -1);
+        }
+
+        return finalResult;
+      }
+
+      function demoPlayfair() {
+        const testCases = [
+          { text: "HELLO", key: "KEYWORD" },
+          { text: "HASANUDDIN", key: "KEYWORD" },
+        ];
+
+        console.log("Playfair Cipher Demo:");
+        for (let test of testCases) {
+          console.log(`\nOriginal text: ${test.text}`);
+          console.log(`Key: ${test.key}`);
+
+          const encrypted = playfairEncrypt(test.text, test.key);
+          console.log(`Encrypted: ${encrypted}`);
+
+          const decrypted = playfairDecrypt(encrypted, test.key);
+          console.log(`Decrypted: ${decrypted}`);
+        }
+      }
+
+      // Tambahkan tombol untuk demo
+      function addDemoButton() {
+        const container = document.querySelector(".container");
+        const demoButton = document.createElement("button");
+        demoButton.textContent = "Run Playfair Demo";
+        demoButton.onclick = demoPlayfair;
+        container.appendChild(demoButton);
+      }
+
+      // Enigma Cipher (Simplified) implementation
+      class EnigmaMachine {
+        constructor() {
+          this.rotors = [
+            "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+            "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+            "BDFHJLCPRTXVZNYEIWGAKMUSQO",
+          ];
+          this.reflector = "YRUHQSLDPXNGOKMIEBFZCWVJAT";
+          this.rotorPositions = [0, 0, 0];
+        }
+
+        rotateRotor(rotor) {
+          return rotor.slice(1) + rotor[0];
+        }
+
+        encryptLetter(letter) {
+          for (let i = 0; i < 3; i++) {
+            const index = letter.charCodeAt(0) - 65;
+            letter = this.rotors[i][index];
+          }
+
+          const index = letter.charCodeAt(0) - 65;
+          letter = this.reflector[index];
+
+          for (let i = 2; i >= 0; i--) {
+            const index = this.rotors[i].indexOf(letter);
+            letter = String.fromCharCode(65 + index);
+          }
+
+          this.rotors[0] = this.rotateRotor(this.rotors[0]);
+
+          return letter;
+        }
+
+        encrypt(text) {
+          return text
+            .toUpperCase()
+            .split("")
+            .map((char) => {
+              if (/[A-Z]/.test(char)) {
+                return this.encryptLetter(char);
+              }
+              return char;
+            })
+            .join("");
+        }
+      }
+
+      // One-Time Pad Cipher implementation
+      function otpEncrypt(text, key) {
+        let result = "";
+        for (let i = 0; i < text.length; i++) {
+          let charCode = text.charCodeAt(i);
+          let keyCode = key.charCodeAt(i % key.length);
+          result += String.fromCharCode(charCode ^ keyCode);
+        }
+        return result;
+      }
+
+      function otpDecrypt(text, key) {
+        return otpEncrypt(text, key);
+      }
+
+      function displayPlayfairMatrix(key) {
+        const matrix = generatePlayfairMatrix(key);
+        let display = "Playfair Matrix:\n";
+        for (let i = 0; i < 5; i++) {
+          display += matrix.slice(i * 5, (i + 1) * 5).join(" ") + "\n";
+        }
+        console.log(display);
+        return display;
+      }
+
+      // UI-related functions
+      function displayOutput(result) {
+        document.getElementById("outputText").textContent = result;
+      }
+
+      function encrypt() {
+        const text = document.getElementById("inputText").value;
+        const key = document.getElementById("key").value;
+        const cipherType = document.getElementById("cipherType").value;
+        let result = "";
+
+        switch (cipherType) {
+          case "vigenere":
+            result = vigenereEncrypt(text, key);
+            break;
+          case "extendedVigenere":
+            result = vigenereEncrypt(text, key, true);
+            break;
+          case "playfair":
+            result = playfairEncrypt(text, key);
+            break;
+          case "enigma":
+            const enigma = new EnigmaMachine();
+            result = enigma.encrypt(text);
+            break;
+          case "otp":
+            result = otpEncrypt(text, key);
+            break;
+          default:
+            result = "Invalid cipher selected!";
+        }
+
+        displayOutput(result);
+      }
+      function decrypt() {
+        const text = document.getElementById("inputText").value;
+        const key = document.getElementById("key").value;
+        const cipherType = document.getElementById("cipherType").value;
+        let result = "";
+
+        switch (cipherType) {
+          case "vigenere":
+            result = vigenereDecrypt(text, key);
+            break;
+          case "extendedVigenere":
+            result = vigenereDecrypt(text, key, true);
+            break;
+          case "playfair":
+            console.log(displayPlayfairMatrix(key)); // This will help with debugging
+            result = playfairDecrypt(text, key);
+            break;
+          case "enigma":
+            const enigma = new EnigmaMachine();
+            result = enigma.encrypt(text); // Enigma is symmetric
+            break;
+          case "otp":
+            result = otpDecrypt(text, key);
+            break;
+          default:
+            result = "Invalid cipher selected!";
+        }
+
+        displayOutput(result);
+      }
+
+      // File upload handling
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", function (event) {
+          const file = event.target.files[0];
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            document.getElementById("inputText").value = e.target.result;
+          };
+          reader.readAsText(file);
+        });
+
+      // Download output as file
+      function downloadOutput() {
+        const text = document.getElementById("outputText").textContent;
+        const blob = new Blob([text], { type: "text/plain" });
+        const anchor = document.createElement("a");
+        anchor.href = URL.createObjectURL(blob);
+        anchor.download = "output.txt";
+        anchor.click();
+      }
+    </script>
+  </body>
+</html>
